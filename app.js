@@ -350,13 +350,10 @@
     STYLES.forEach(function (s, i) {
       var b = document.createElement('button');
       b.className = 'chip' + (i === state.styleIdx ? ' active' : '');
+      b.style.fontFamily = s.font;
+      b.textContent = s.name;
       b.title = s.name;
       b.onclick = function () { state.styleIdx = i; syncControls(); refresh(); };
-      var prev = document.createElement('span');
-      prev.className = 'chip-prev';
-      prev.style.fontFamily = s.font;
-      prev.textContent = s.name;
-      b.appendChild(prev);
       chips.appendChild(b);
     });
   }
