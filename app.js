@@ -11,15 +11,15 @@
   // Default styles if fonts/fonts.json cannot be loaded.
   // Add your own: drop a .ttf/.otf/.woff file into fonts/ and list it in fonts/fonts.json.
   var DEFAULT_STYLES = [
-    { name: 'Pinyon',      font: '"Pinyon Script"' },
-    { name: 'Muellerhoff', font: '"Herr Von Muellerhoff"' },
-    { name: 'Doulaise',    font: '"Monsieur La Doulaise"' },
-    { name: 'Qwigley',     font: '"Qwigley"' },
-    { name: 'Arizonia',    font: '"Arizonia"' },
-    { name: 'Euphoria',    font: '"Euphoria Script"' },
-    { name: 'Californian', font: '"Californian Signature"' },
-    { name: 'Dalton',      font: '"Dalton White"' },
-    { name: 'Priestacy',   font: '"Priestacy"' }
+    { name: 'Pinyon Script',         font: '"Pinyon Script"' },
+    { name: 'Herr Von Muellerhoff', font: '"Herr Von Muellerhoff"' },
+    { name: 'Monsieur La Doulaise', font: '"Monsieur La Doulaise"' },
+    { name: 'Qwigley',              font: '"Qwigley"' },
+    { name: 'Arizonia',             font: '"Arizonia"' },
+    { name: 'Euphoria Script',      font: '"Euphoria Script"' },
+    { name: 'Californian Signature', font: '"Californian Signature"' },
+    { name: 'Dalton White',        font: '"Dalton White"' },
+    { name: 'Priestacy',           font: '"Priestacy"' }
   ];
   var STYLES = DEFAULT_STYLES.slice();
   var INKS = [
@@ -287,9 +287,8 @@
   }
 
   function syncControls() {
-    var chips = document.getElementById('styleChips').children;
-    for (var i = 0; i < chips.length; i++)
-      chips[i].classList.toggle('active', i === state.styleIdx);
+    var sel = document.getElementById('styleSelect');
+    if (sel) sel.value = state.styleIdx;
     var sws = document.getElementById('inkSwatches').children;
     for (var j = 0; j < sws.length; j++)
       sws[j].classList.toggle('active', j === state.inkIdx);
@@ -312,7 +311,7 @@
         var face = new FontFace(f.family, "url('" + 'fonts/' + f.file.replace(/'/g, '') + "')");
         return face.load().then(function (loaded) {
           document.fonts.add(loaded);
-          return { name: f.name || f.family, font: '"' + f.family + '"' };
+          return { name: f.family, font: '"' + f.family + '"' };
         }).catch(function () { return null; });
       });
       return Promise.all(loads).then(function (results) {
@@ -322,18 +321,19 @@
     }).catch(function () { /* keep DEFAULT_STYLES */ });
   }
 
-  function buildStyleChips() {
-    var chips = document.getElementById('styleChips');
-    chips.innerHTML = '';
+  function buildStyleSelect() {
+    var sel = document.getElementById('styleSelect');
+    sel.innerHTML = '';
     STYLES.forEach(function (s, i) {
-      var b = document.createElement('button');
-      b.className = 'chip' + (i === state.styleIdx ? ' active' : '');
-      b.style.fontFamily = s.font;
-      b.textContent = 'Signature';
-      b.title = s.name;
-      b.onclick = function () { state.styleIdx = i; syncControls(); refresh(); };
-      chips.appendChild(b);
+      var o = document.createElement('option');
+      o.value = i;
+      o.textContent = s.name;
+      sel.appendChild(o);
     });
+    sel.value = state.styleIdx;
+    sel.onchange = function () {
+      state.styleIdx = +sel.value; syncControls(); refresh();
+    };
   }
 
   function init() {
@@ -371,10 +371,10 @@
     // theme follows the device (prefers-color-scheme in CSS); no toggle button.
     // load bundled fonts, build the style chips, then draw
     loadFontSet().then(function () {
-      buildStyleChips(); syncControls(); refresh();
+      buildStyleSelect(); syncControls(); refresh();
     });
     setTimeout(function () {
-      if (!state.off) { buildStyleChips(); syncControls(); refresh(); }
+      if (!state.off) { buildStyleSelect(); syncControls(); refresh(); }
     }, 3000); // fallback
   }
 
