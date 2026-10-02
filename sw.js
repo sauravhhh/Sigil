@@ -1,5 +1,5 @@
 /* Sigil service worker — network-first pages, cache-first assets */
-var CACHE = 'sigil-v1';
+var CACHE = 'sigil-v2';
 var ASSETS = ['index.html', 'app.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'favicon-32.png'];
 
 self.addEventListener('install', function (e) {
