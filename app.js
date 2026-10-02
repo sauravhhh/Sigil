@@ -25,7 +25,7 @@
     { name: 'Gold', c: '#b45309' },     { name: 'Violet', c: '#6d28d9' }
   ];
   var BACKGROUNDS = [
-    { name: 'Paper', c: '#ffffff' }, { name: 'Dark', c: '#111111' }, { name: 'Clear', c: 'transparent' }
+    { name: 'Paper', c: '#ffffff' }, { name: 'Clear', c: 'transparent' }
   ];
 
   function sanitizeName(s) {
@@ -120,7 +120,7 @@
     ctx.fillStyle = bg.c; ctx.fillRect(0, 0, W, H);
   }
 
-  function drawFrame(ctx, progress) {
+  function drawFrame(ctx, progress, skipFlourish) {
     var ink = INKS[state.inkIdx];
     paintBackground(ctx);
     // text reveal
@@ -130,8 +130,8 @@
     ctx.beginPath(); ctx.rect(0, 0, revealW, H); ctx.clip();
     ctx.drawImage(state.off, 0, 0);
     ctx.restore();
-    // flourish underline
-    var fp = Math.max(0, Math.min((progress - TEXT_PHASE) / (1 - TEXT_PHASE), 1));
+    // flourish underline (skipped for clean PNG export)
+    var fp = skipFlourish ? 0 : Math.max(0, Math.min((progress - TEXT_PHASE) / (1 - TEXT_PHASE), 1));
     var pen = null;
     if (fp > 0) {
       ctx.strokeStyle = ink.c; ctx.lineWidth = 7; ctx.lineCap = 'round';
@@ -220,7 +220,7 @@
     if (!name) { hint('Type your name first.'); return; }
     setBusy(btn, true);
     cancelAnimationFrame(state.raf);
-    frameAt(1);
+    drawFrame(getCtx('stage'), 1, true); // clean export: no flourish line
     document.getElementById('stage').toBlob(function (blob) {
       setBusy(btn, false);
       if (!blob) { hint('PNG export failed on this browser.'); return; }
