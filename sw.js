@@ -1,10 +1,11 @@
-/* Sigil service worker — network-first pages, cache-first assets */
-var CACHE = 'sigil-v2';
-var ASSETS = ['index.html', 'app.js', 'manifest.json', 'icon-192.png', 'icon-512.png', 'favicon-32.png'];
+/* Sigil service worker — network-first for page + app code (always fresh),
+   cache-first for fonts and icons (rarely change) */
+var CACHE = 'sigil-v3';
+var PRECACHE = ['index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'favicon-32.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
-    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); })
+    caches.open(CACHE).then(function (c) { return c.addAll(PRECACHE); })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -18,27 +19,30 @@ self.addEventListener('activate', function (e) {
   );
 });
 
+function networkFirst(req) {
+  return fetch(req).then(function (res) {
+    var copy = res.clone();
+    caches.open(CACHE).then(function (c) { c.put(req, copy); });
+    return res;
+  }).catch(function () {
+    return caches.match(req).then(function (hit) { return hit || caches.match('index.html'); });
+  });
+}
+
+function cacheFirst(req) {
+  return caches.match(req).then(function (hit) {
+    return hit || fetch(req).then(function (res) {
+      var copy = res.clone();
+      caches.open(CACHE).then(function (c) { c.put(req, copy); });
+      return res;
+    });
+  });
+}
+
 self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
-        return res;
-      }).catch(function () { return caches.match('index.html'); })
-    );
-    return;
-  }
-  if (url.origin === location.origin) {
-    e.respondWith(
-      caches.match(e.request).then(function (hit) {
-        return hit || fetch(e.request).then(function (res) {
-          var copy = res.clone();
-          caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
-          return res;
-        });
-      })
-    );
-  }
+  if (url.origin !== location.origin) return;
+  var p = url.pathname;
+  var fresh = e.request.mode === 'navigate' || p.endsWith('/app.js') || p.endsWith('/index.html');
+  e.respondWith(fresh ? networkFirst(e.request) : cacheFirst(e.request));
 });
