@@ -16,7 +16,10 @@
     { name: 'Doulaise',    font: '"Monsieur La Doulaise"' },
     { name: 'Qwigley',     font: '"Qwigley"' },
     { name: 'Arizonia',    font: '"Arizonia"' },
-    { name: 'Euphoria',    font: '"Euphoria Script"' }
+    { name: 'Euphoria',    font: '"Euphoria Script"' },
+    { name: 'Californian', font: '"Californian Signature"' },
+    { name: 'Dalton',      font: '"Dalton White"' },
+    { name: 'Priestacy',   font: '"Priestacy"' }
   ];
   var STYLES = DEFAULT_STYLES.slice();
   var INKS = [
