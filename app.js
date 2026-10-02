@@ -352,10 +352,17 @@
     STYLES.forEach(function (s, i) {
       var b = document.createElement('button');
       b.className = 'chip' + (i === state.styleIdx ? ' active' : '');
-      b.style.fontFamily = s.font;
-      b.textContent = chipLabel();
       b.title = s.name;
       b.onclick = function () { state.styleIdx = i; syncControls(); refresh(); };
+      var prev = document.createElement('span');
+      prev.className = 'chip-prev';
+      prev.style.fontFamily = s.font;
+      prev.textContent = chipLabel();
+      var cap = document.createElement('span');
+      cap.className = 'chip-name';
+      cap.textContent = s.name;
+      b.appendChild(prev);
+      b.appendChild(cap);
       chips.appendChild(b);
     });
     nameInput._chipLabel = chipLabel;
@@ -389,7 +396,7 @@
         var chipsEl = nameInput._chips, labelFn = nameInput._chipLabel;
         if (chipsEl && labelFn) {
           var label = labelFn();
-          Array.prototype.forEach.call(chipsEl.children, function (c) { c.textContent = label; });
+          Array.prototype.forEach.call(chipsEl.querySelectorAll('.chip-prev'), function (p) { p.textContent = label; });
         }
         refresh();
       }, 350);
