@@ -71,16 +71,6 @@
 
   function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
 
-  // Quadratic bezier point for the flourish underline
-  function flourishPoint(q) {
-    var x0 = W * 0.16, y0 = H * 0.80;
-    var cx = W * 0.50, cy = H * 0.99;
-    var x1 = W * 0.86, y1 = H * 0.66;
-    var x = (1 - q) * (1 - q) * x0 + 2 * (1 - q) * q * cx + q * q * x1;
-    var y = (1 - q) * (1 - q) * y0 + 2 * (1 - q) * q * cy + q * q * y1;
-    return { x: x, y: y };
-  }
-
   // ---- browser-only engine ----
   var state = {
     styleIdx: 0, inkIdx: 0, bgIdx: 0,
@@ -120,7 +110,7 @@
     ctx.fillStyle = bg.c; ctx.fillRect(0, 0, W, H);
   }
 
-  function drawFrame(ctx, progress, skipFlourish) {
+  function drawFrame(ctx, progress) {
     var ink = INKS[state.inkIdx];
     paintBackground(ctx);
     // text reveal
@@ -130,24 +120,9 @@
     ctx.beginPath(); ctx.rect(0, 0, revealW, H); ctx.clip();
     ctx.drawImage(state.off, 0, 0);
     ctx.restore();
-    // flourish underline (skipped for clean PNG export)
-    var fp = skipFlourish ? 0 : Math.max(0, Math.min((progress - TEXT_PHASE) / (1 - TEXT_PHASE), 1));
-    var pen = null;
-    if (fp > 0) {
-      ctx.strokeStyle = ink.c; ctx.lineWidth = 7; ctx.lineCap = 'round';
-      ctx.beginPath();
-      var steps = 48, n = Math.max(2, Math.round(steps * fp));
-      for (var i = 0; i <= n; i++) {
-        var pt = flourishPoint(i / steps);
-        if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
-      }
-      ctx.stroke();
-      pen = flourishPoint(Math.min(fp, 1));
-    } else if (tp < 1) {
-      pen = { x: Math.min(revealW, W - 8), y: H * 0.44 };
-    }
-    // pen nib dot
-    if (pen) {
+    // pen nib dot follows the reveal edge
+    if (tp < 1) {
+      var pen = { x: Math.min(revealW, W - 8), y: H * 0.44 };
       ctx.save();
       ctx.shadowColor = ink.c; ctx.shadowBlur = 18;
       ctx.fillStyle = ink.c;
@@ -220,7 +195,7 @@
     if (!name) { hint('Type your name first.'); return; }
     setBusy(btn, true);
     cancelAnimationFrame(state.raf);
-    drawFrame(getCtx('stage'), 1, true); // clean export: no flourish line
+    drawFrame(getCtx('stage'), 1); // final frame for export
     document.getElementById('stage').toBlob(function (blob) {
       setBusy(btn, false);
       if (!blob) { hint('PNG export failed on this browser.'); return; }
@@ -350,9 +325,17 @@
     STYLES.forEach(function (s, i) {
       var b = document.createElement('button');
       b.className = 'chip' + (i === state.styleIdx ? ' active' : '');
-      b.textContent = s.name;
       b.title = s.name;
       b.onclick = function () { state.styleIdx = i; syncControls(); refresh(); };
+      var prev = document.createElement('span');
+      prev.className = 'chip-prev';
+      prev.style.fontFamily = s.font;
+      prev.textContent = 'Signature';
+      var cap = document.createElement('span');
+      cap.className = 'chip-name';
+      cap.textContent = s.name;
+      b.appendChild(prev);
+      b.appendChild(cap);
       chips.appendChild(b);
     });
   }
@@ -410,7 +393,7 @@
     pickMime: pickMime, extFor: extFor,
     loadGallery: loadGallery, saveGallery: saveGallery,
     addToGallery: addToGallery, removeFromGallery: removeFromGallery,
-    flourishPoint: flourishPoint, easeOutCubic: easeOutCubic,
+    easeOutCubic: easeOutCubic,
     W: W, H: H, DURATION: DURATION
   };
 });
