@@ -359,7 +359,6 @@
   }
 
   function init() {
-    var nameInput = document.getElementById('nameInput');
     var sws = document.getElementById('inkSwatches');
     INKS.forEach(function (ink, i) {
       var b = document.createElement('button');
@@ -376,12 +375,6 @@
       b.textContent = bg.name;
       b.onclick = function () { state.bgIdx = i; syncControls(); refresh(); };
       seg.appendChild(b);
-    });
-
-    var deb;
-    nameInput.addEventListener('input', function () {
-      clearTimeout(deb);
-      deb = setTimeout(refresh, 350);
     });
 
     document.getElementById('replayBtn').onclick = function () { refresh(); };
