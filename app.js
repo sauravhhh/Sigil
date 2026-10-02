@@ -8,14 +8,17 @@
   var DURATION = 3200;          // full animation ms
   var TEXT_PHASE = 0.72;        // fraction of time spent revealing the text
 
-  var STYLES = [
-    { name: 'Royal',   font: '"Great Vibes"' },
-    { name: 'Classic', font: '"Allura"' },
-    { name: 'Modern',  font: '"Dancing Script"' },
-    { name: 'Casual',  font: '"Satisfy"' },
-    { name: 'Elegant', font: '"Parisienne"' },
-    { name: 'Bold',    font: '"Alex Brush"' }
+  // Default styles if fonts/fonts.json cannot be loaded.
+  // Add your own: drop a .ttf/.otf/.woff file into fonts/ and list it in fonts/fonts.json.
+  var DEFAULT_STYLES = [
+    { name: 'Pinyon',      font: '"Pinyon Script"' },
+    { name: 'Muellerhoff', font: '"Herr Von Muellerhoff"' },
+    { name: 'Doulaise',    font: '"Monsieur La Doulaise"' },
+    { name: 'Qwigley',     font: '"Qwigley"' },
+    { name: 'Arizonia',    font: '"Arizonia"' },
+    { name: 'Euphoria',    font: '"Euphoria Script"' }
   ];
+  var STYLES = DEFAULT_STYLES.slice();
   var INKS = [
     { name: 'Midnight', c: '#141414' }, { name: 'Royal blue', c: '#1d4ed8' },
     { name: 'Crimson', c: '#b91c1c' },  { name: 'Emerald', c: '#047857' },
@@ -101,12 +104,13 @@
     var off = document.createElement('canvas');
     off.width = W; off.height = H;
     var ctx = off.getContext('2d');
-    var style = STYLES[state.styleIdx], ink = INKS[state.inkIdx];
-    state.fontPx = fitFont(ctx, name, style.font);
+    var style = STYLES[state.styleIdx] || STYLES[0], ink = INKS[state.inkIdx];
+    var display = name || 'Your signature';
+    state.fontPx = fitFont(ctx, display, style.font);
     ctx.font = state.fontPx + 'px ' + style.font;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = ink.c;
-    ctx.fillText(name, W / 2, H * 0.44);
+    ctx.fillStyle = name ? ink.c : '#b9bdc4';
+    ctx.fillText(display, W / 2, H * 0.44);
     state.off = off;
   }
 
@@ -173,8 +177,7 @@
   }
 
   function refresh() {
-    var name = currentName() || 'Your Name';
-    renderOffscreen(name);
+    renderOffscreen(currentName());
     play();
     document.getElementById('stageWrap').classList
       .toggle('checker', BACKGROUNDS[state.bgIdx].c === 'transparent');
@@ -317,20 +320,50 @@
       segs[k].classList.toggle('active', k === state.bgIdx);
   }
 
-  function init() {
-    // style chips show the user's name in each font
+  // Load fonts listed in fonts/fonts.json via FontFace, then rebuild the style chips.
+  // Falls back to DEFAULT_STYLES when the manifest or a file cannot be loaded.
+  function loadFontSet() {
+    if (!window.FontFace || !document.fonts) return Promise.resolve();
+    return fetch('fonts/fonts.json').then(function (r) {
+      if (!r.ok) throw new Error('fonts.json missing');
+      return r.json();
+    }).then(function (manifest) {
+      var list = ((manifest && manifest.fonts) || []).filter(function (f) { return f.family && f.file; });
+      if (!list.length) throw new Error('no fonts listed');
+      var loads = list.map(function (f) {
+        var face = new FontFace(f.family, "url('" + 'fonts/' + f.file.replace(/'/g, '') + "')");
+        return face.load().then(function (loaded) {
+          document.fonts.add(loaded);
+          return { name: f.name || f.family, font: '"' + f.family + '"' };
+        }).catch(function () { return null; });
+      });
+      return Promise.all(loads).then(function (results) {
+        var okStyles = results.filter(Boolean);
+        if (okStyles.length) { STYLES = okStyles; state.styleIdx = 0; }
+      });
+    }).catch(function () { /* keep DEFAULT_STYLES */ });
+  }
+
+  function buildStyleChips() {
     var chips = document.getElementById('styleChips');
     var nameInput = document.getElementById('nameInput');
+    chips.innerHTML = '';
     function chipLabel() { return currentName() || 'Signature'; }
     STYLES.forEach(function (s, i) {
       var b = document.createElement('button');
-      b.className = 'chip' + (i === 0 ? ' active' : '');
+      b.className = 'chip' + (i === state.styleIdx ? ' active' : '');
       b.style.fontFamily = s.font;
       b.textContent = chipLabel();
       b.title = s.name;
       b.onclick = function () { state.styleIdx = i; syncControls(); refresh(); };
       chips.appendChild(b);
     });
+    nameInput._chipLabel = chipLabel;
+    nameInput._chips = chips;
+  }
+
+  function init() {
+    var nameInput = document.getElementById('nameInput');
     var sws = document.getElementById('inkSwatches');
     INKS.forEach(function (ink, i) {
       var b = document.createElement('button');
@@ -353,8 +386,11 @@
     nameInput.addEventListener('input', function () {
       clearTimeout(deb);
       deb = setTimeout(function () {
-        var label = chipLabel();
-        Array.prototype.forEach.call(chips.children, function (c) { c.textContent = label; });
+        var chipsEl = nameInput._chips, labelFn = nameInput._chipLabel;
+        if (chipsEl && labelFn) {
+          var label = labelFn();
+          Array.prototype.forEach.call(chipsEl.children, function (c) { c.textContent = label; });
+        }
         refresh();
       }, 350);
     });
@@ -363,26 +399,16 @@
     document.getElementById('pngBtn').onclick = exportPNG;
     document.getElementById('vidBtn').onclick = exportVideo;
 
-    // theme
-    var themeBtn = document.getElementById('themeBtn');
-    function applyTheme(t) {
-      document.documentElement.setAttribute('data-theme', t);
-      themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
-      try { localStorage.setItem('sigil_theme', t); } catch (e) {}
-    }
-    try { applyTheme(localStorage.getItem('sigil_theme') || 'light'); } catch (e) { applyTheme('light'); }
-    themeBtn.onclick = function () {
-      applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    };
-
     renderGallery();
 
-    // wait for handwriting fonts, then draw
-    var loads = STYLES.map(function (s) {
-      try { return document.fonts.load('90px ' + s.font); } catch (e) { return Promise.resolve(); }
+    // theme follows the device (prefers-color-scheme in CSS); no toggle button.
+    // load bundled fonts, build the style chips, then draw
+    loadFontSet().then(function () {
+      buildStyleChips(); syncControls(); refresh();
     });
-    Promise.all(loads).then(refresh).catch(refresh);
-    setTimeout(function () { if (!state.off) refresh(); }, 2500); // fallback
+    setTimeout(function () {
+      if (!state.off) { buildStyleChips(); syncControls(); refresh(); }
+    }, 3000); // fallback
   }
 
   if (typeof document !== 'undefined' && document.getElementById) {
